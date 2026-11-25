@@ -44,8 +44,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-volatile int flag=0;
-volatile int status=0;
+volatile uint32_t cnt=0;
+volatile uint32_t lasttime=0;
+volatile uint8_t mode=0;
+volatile int key=0;
+volatile int cnt1=0;
+volatile int cnt2=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,9 +102,15 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim1);
   while (1)
   {
-		if(flag==1){
-			HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_0);
-			flag=0;
+		if(mode==1){
+			HAL_GPIO_TogglePin (GPIOA,GPIO_PIN_0);
+			mode=0;
+		}
+		if(mode==2){
+			if(HAL_GetTick()-lasttime>=100){
+				HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_0);
+				lasttime=HAL_GetTick();
+			}
 		}
     /* USER CODE END WHILE */
 
@@ -151,26 +161,49 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim==&htim1){
-		if(status==0){
+		if(key==0){
 			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_9)==GPIO_PIN_RESET){
-				status=1;
-			}	
-		}
-		else if (status==1){
-			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_9)==GPIO_PIN_RESET){
-				status=2;
-				flag=1;
-			}	
-			else{
-				status=0;
+				cnt1++;
+				if(cnt1>=2){
+					key=1;
+					cnt1=0;
+					cnt=0;
+				}
 			}
+			
+		}	
+		if(key==1){
+			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_9)==GPIO_PIN_RESET){
+				cnt++;
+				cnt2=0;
+			}
+		
 		}
-		else if(status==2){
+		if(key==1){
 			if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_9)==GPIO_PIN_SET){
-				status=0;
+				cnt2++;
+				if(cnt2>=2){
+					key=0;
+					if(cnt>=50){
+						if(mode==2){
+							mode=0;
+							HAL_GPIO_WritePin(GPIOA,GPIO_PIN_0,GPIO_PIN_RESET);
+						}else{mode=2;}
+					}
+					else{mode=1;}
+					cnt2=0;
+				}
+			
+			
 			}
 		}
+		
+	
 	}
+
+
+
+
 }
 /* USER CODE END 4 */
 
